@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleGenAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FlashcardTrainer } from './FlashcardTrainer';
-import { translations, Language } from './i18n'; // Импортируем нашу систему перевода
+import { translations } from './i18n';
 
 interface Flashcard {
   id: string;
@@ -41,11 +41,10 @@ export const DictionaryCatalog: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [decks, setDecks] = useState<DictionaryDeck[]>(INITIAL_DECKS);
-  const [, setInstalledDeckIds] = useState<string[]>([]);
   
   // Переключение языка интерфейса
-  const [lang, setLang] = useState<Language>('ru');
-  const t = translations[lang]; // Быстрый доступ к активным строкам перевода
+  const [lang, setLang] = useState<'ru' | 'en' | 'de'>('ru');
+  const t = translations[lang] || translations['ru'];
 
   // Ключи и настройки провайдеров ИИ
   const [aiProvider, setAiProvider] = useState<'gemini' | 'deepseek'>('gemini');
@@ -65,7 +64,7 @@ export const DictionaryCatalog: React.FC = () => {
     setApiKey(localStorage.getItem('bx_gemini_key') || '');
     setDeepseekKey(localStorage.getItem('bx_deepseek_key') || '');
     setAiProvider((localStorage.getItem('bx_ai_provider') as 'gemini' | 'deepseek') || 'gemini');
-    setLang((localStorage.getItem('bx_app_lang') as Language) || 'ru');
+    setLang((localStorage.getItem('bx_app_lang') as 'ru' | 'en' | 'de') || 'ru');
     
     setUserXP(parseInt(localStorage.getItem('bx_user_xp') || '0', 10));
     setStreak(parseInt(localStorage.getItem('bx_user_streak') || '0', 10));
@@ -100,7 +99,7 @@ export const DictionaryCatalog: React.FC = () => {
     localStorage.setItem('bx_ai_provider', provider);
   };
 
-  const handleLangChange = (newLang: Language) => {
+  const handleLangChange = (newLang: 'ru' | 'en' | 'de') => {
     setLang(newLang);
     localStorage.setItem('bx_app_lang', newLang);
   };
@@ -136,9 +135,9 @@ export const DictionaryCatalog: React.FC = () => {
     try {
       let responseText = "";
       if (aiProvider === 'gemini') {
-        const ai = new GoogleGenAI({ apiKey: currentKey });
-        const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: systemInstruction }] }] });
+        const genAI = new GoogleGenerativeAI(currentKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent(systemInstruction);
         responseText = result.response.text().trim();
       } else {
         const response = await fetch('https://deepseek.com', {
@@ -152,7 +151,7 @@ export const DictionaryCatalog: React.FC = () => {
           })
         });
         const data = await response.json();
-        responseText = data.choices[0].message.content.trim();
+        responseText = data.choices.message.content.trim();
       }
 
       if (responseText.includes('```')) {
@@ -208,7 +207,7 @@ export const DictionaryCatalog: React.FC = () => {
         
         {/* Переключатель языков интерфейса */}
         <div className="flex justify-end gap-1 text-[11px]">
-          {(['ru', 'en', 'de'] as Language[]).map(l => (
+          {(['ru', 'en', 'de'] as ('ru' | 'en' | 'de')[]).map(l => (
             <button
               key={l}
               onClick={() => handleLangChange(l)}
@@ -369,3 +368,4 @@ export const DictionaryCatalog: React.FC = () => {
     </div>
   );
 };
+
